@@ -1,14 +1,15 @@
 # Base image
-FROM theotw/devstack:go1.19.7  as build
+FROM theotw/devstack:go1.19.7  as base
 LABEL stage=build
 WORKDIR /build
-RUN mkdir -p web
-RUN mkdir -p webout
+RUN mkdir -p mods
 COPY ./ ./
-ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin/
+ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin/:/build/mods/bin
 ENV GOSUMDB=off
 ARG IMAGE_TAG=latest
 ARG  CA_KEY
+ARG GOPATH=/build/mods
+
 RUN make buildlinux
 RUN make buildtest
 
@@ -20,92 +21,25 @@ RUN echo 'hosts: files dns' > /etc/nsswitch.conf
 
 
 # Test image
-FROM alpine-base as natssync-tests
+FROM alpine-base as k8srelay-test
 WORKDIR /build
 ARG IMAGE_TAG=latest
 ENV GOSUMDB=off
-COPY --from=base /build/third_party/swaggerui/ ./third_party/swaggerui/
-COPY --from=base /build/openapi/bridge_server_v1.yaml ./openapi/
 COPY --from=base /build/out/*.test ./
 
 # Bridge server
-FROM alpine-base as natssync-server
+FROM alpine-base as k8srelayserver
 WORKDIR /build
-COPY --from=base /build/LICENSE /data/
-COPY --from=base /build/web /build/web
-#when running with scratch, this needs to go away
-RUN chmod -R 777 /data/
-COPY --from=base /build/out/bridgeserver_amd64_linux ./bridgeserver_amd64_linux
-COPY --from=base /build/third_party/swaggerui/ ./third_party/swaggerui/
-COPY --from=base /build/openapi/bridge_server_v1.yaml ./openapi/
+COPY --from=base /build/out/k8srelayserver_amd64_linux ./k8srelayserver
 ENV GIN_MODE=release
 
-ENTRYPOINT ["./bridgeserver_amd64_linux"]
+ENTRYPOINT ["./k8srelayserver"]
 
 # Bridge client
-FROM alpine-base as natssync-client
+FROM alpine-base as k8srelaylet
 ARG IMAGE_TAG=latest
 ENV GOSUMDB=off
-
 WORKDIR /build
-COPY --from=base /build/LICENSE /data/
-#when running with scratch, this needs to go away
-RUN chmod -R 777 /data/
-COPY --from=base /build/webout /build/webout
-COPY --from=base /build/out/bridgeclient_amd64_linux ./bridgeclient_amd64_linux
-COPY --from=base /build/third_party/swaggerui/ ./third_party/swaggerui/
-COPY --from=base /build/openapi/bridge_client_v1.yaml ./openapi/
+COPY --from=base /build/out/k8srelaylet_amd64_linux ./k8srelaylet
 ENV GIN_MODE=release
-ENTRYPOINT ["./bridgeclient_amd64_linux"]
-
-# Cloudserver debug
-FROM natssync-base:latest as debugnatssync-server
-ARG IMAGE_TAG=latest
-ENV GOSUMDB=off
-RUN go build -gcflags "all=-N -l"  -v -o out/bridgeserver_amd64_linux apps/bridge_server.go
-RUN go get github.com/go-delve/delve/cmd/dlv
-ENTRYPOINT ["dlv","--listen=:2345","--headless=true","--api-version=2","--accept-multiclient","exec" ,"out/bridgeserver_amd64_linux"]
-
-# Echo proxylet
-FROM alpine-base as echo-proxylet
-ARG IMAGE_TAG=latest
-ENV GOSUMDB=off
-COPY --from=base /build/out/echo_main_amd64_linux ./echo_main_amd64_linux
-ENTRYPOINT ["./echo_main_amd64_linux"]
-
-# Simple auth
-FROM alpine-base as simple-reg-auth
-ARG IMAGE_TAG=latest
-ENV GOSUMDB=off
-COPY --from=base /build/out/simple_auth_amd64_linux ./simple_auth_amd64_linux
-ENTRYPOINT ["./simple_auth_amd64_linux"]
-
-# http proxy
-FROM alpine-base as http_proxy
-ARG IMAGE_TAG=latest
-ENV GOSUMDB=off
-COPY --from=base /build/out/http_proxy_amd64_linux ./http_proxy_amd64_linux
-ENTRYPOINT ["./http_proxy_amd64_linux"]
-
-# http proxylet
-FROM alpine-base as http_proxylet
-ARG IMAGE_TAG=latest
-ENV GOSUMDB=off
-COPY --from=base /build/out/http_proxylet_amd64_linux ./http_proxylet_amd64_linux
-ENTRYPOINT ["./http_proxylet_amd64_linux"]
-
-FROM alpine-base as  k8srelaylet
-ARG IMAGE_TAG=latest
-ENV GOSUMDB=off
-COPY --from=base /build/out/k8srelaylet_amd64_linux ./k8srelaylet_amd64_linux
-
-ENTRYPOINT ["./k8srelaylet_amd64_linux"]
-FROM alpine-base as  k8srelayserver
-ARG IMAGE_TAG=latest
-ENV GOSUMDB=off
-COPY --from=base /build/out/k8srelayserver_amd64_linux ./k8srelayserver_amd64_linux
-RUN mkdir out
-COPY --from=base /build/out/k8srelay.crt ./out/k8srelay.crt
-COPY --from=base /build/out/k8srelay.key ./out/k8srelay.key
-COPY --from=base /build/myCA.pem ./out/myCA.pem
-ENTRYPOINT ["./k8srelayserver_amd64_linux"]
+ENTRYPOINT ["./k8srelaylet"]

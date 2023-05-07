@@ -1,0 +1,59 @@
+name: CICD
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: "*"
+  workflow_dispatch:
+    branches: '*'
+
+jobs:
+  build_and_test:
+    name: CICD tests
+    runs-on: ubuntu-latest
+    env:
+      DOCKER_USERNAME: ${{ secrets.DOCKER_USER }}
+      DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+      GH_CONTAINER_USER: ${{ secrets.GH_CONTAINER_USER }}
+      GH_CONTAINER_PASSWORD: ${{ secrets.GH_CONTAINER_PASSWORD }}
+    steps:
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v3
+        with:
+          go-version: ^1.19
+
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v2
+
+      - name: Get dependencies
+        run: |
+          go mod tidy
+          go install github.com/t-yuki/gocover-cobertura@latest
+          go install github.com/wadey/gocovmerge@latest
+          mkdir -p out
+
+      - name: Create kind cluster
+        uses: helm/kind-action@v1.4.0
+        with:
+          config: connector/testfiles/kind-config.yaml
+      - name: Validate Kind Cluster
+        run: |
+          echo "let kind get up and running"
+          sleep 120
+          echo "kubectl get nodes -o wide" 
+          kubectl get nodes -o wide
+          echo "kubectl get storageclasses"
+          kubectl get storageclasses
+          echo "kubectl  get serviceaccount"
+          kubectl  get serviceaccount
+
+
+      - name: Upload test artifacts
+        uses: actions/upload-artifact@v2
+        if: always()
+        with:
+          name: cicd-test-results
+          path: |
+            out/*
+          retention-days: 5
