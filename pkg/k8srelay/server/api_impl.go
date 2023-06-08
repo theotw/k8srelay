@@ -8,13 +8,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	uuid2 "github.com/google/uuid"
 	"github.com/nats-io/nats.go"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 	"github.com/theotw/k8srelay/pkg"
-	models "github.com/theotw/k8srelay/pkg/k8srelay/model"
+	"github.com/theotw/k8srelay/pkg/k8srelay/model"
 	"github.com/theotw/k8srelay/pkg/natsmodel"
-	"github.com/theotw/k8srelay/pkg/utils"
 	"io"
 	"net/http"
 	"net/url"
@@ -91,7 +91,7 @@ func genericHandlerHandler(c *gin.Context) {
 		panic(err)
 	}
 
-	req := models.NewCallReq()
+	req := model.NewCallReq()
 	for k, v := range c.Request.Header {
 		if k != "Authorization" {
 			req.AddHeader(k, v[0])
@@ -104,10 +104,22 @@ func genericHandlerHandler(c *gin.Context) {
 	if err != nil {
 		log.WithError(err).Errorf("Unable to read body on call %s - %s error: %s", c.Request.Method, parse.Path, err.Error())
 	}
+
+	requestUUID := uuid2.New().String()
+	urlString := c.Request.URL.String()
+	if strings.HasPrefix(urlString, "/api/v1/namespaces") &&
+		strings.Contains(urlString, "pods") &&
+		strings.Contains(urlString, "log") &&
+		strings.HasSuffix(urlString, "follow=true") {
+		// looking for log follow /api/v1/namespaces/<ns>/pods/<pod>/log?container=<container>&follow=true
+		log.Infof("got log streaming request, setting stream and UUID %s for the client request", requestUUID)
+		req.Stream = true
+		req.UUID = requestUUID
+	}
 	req.InBody = bodyBits
 	nc := natsmodel.GetNatsConnection()
-	replySub := utils.MakeNBReplySubject()
-	sbMsgSub := utils.MakeMessageSubject(userTokenWhichBecomesRouteID, models.K8SRelayRequestMessageSubjectSuffix)
+	replySub := model.MakeNBReplySubject()
+	sbMsgSub := model.MakeMessageSubject(userTokenWhichBecomesRouteID, model.K8SRelayRequestMessageSubjectSuffix)
 	bits, err := json.Marshal(&req)
 	if err != nil {
 		c.Status(502)
@@ -119,7 +131,7 @@ func genericHandlerHandler(c *gin.Context) {
 	nm := nats.NewMsg(sbMsgSub)
 	nm.Data = bits
 	nm.Reply = replySub
-	sync, err := nc.SubscribeSync(replySub)
+	replyChannel, err := nc.SubscribeSync(replySub)
 	if err != nil {
 		c.Status(502)
 		log.WithError(err).Errorf("Returning a 502, got an error Subscribe %s ", err.Error())
@@ -127,46 +139,78 @@ func genericHandlerHandler(c *gin.Context) {
 		c.Writer.Write([]byte(fmt.Sprintf(" gate way error %s", err.Error())))
 		return
 	}
-	nc.PublishMsg(nm)
+	err = nc.PublishMsg(nm)
+	if err != nil {
+		c.Status(502)
+		c.Header("Content-Type", "text/plain")
+		log.WithError(err).Errorf("Returning a 502, got an error failed to publish message %s ", err.Error())
+		c.Writer.Write([]byte(fmt.Sprintf(" gate way error %s", err.Error())))
+		return
+	}
+
 	isFirst := true
 	for {
-		msg, err := sync.NextMsg(time.Minute * 2)
-		if err != nil {
-			c.Status(502)
-			c.Header("Content-Type", "text/plain")
-			log.WithError(err).Errorf("Returning a 502, got an error next message %s ", err.Error())
-			c.Writer.Write([]byte(fmt.Sprintf(" gate way error %s", err.Error())))
-			return
-		}
-
-		var respMsg models.CallResponse
-		err = json.Unmarshal(msg.Data, &respMsg)
-		if err != nil {
-			c.Status(502)
-			c.Header("Content-Type", "text/plain")
-			log.WithError(err).Errorf("Returning a 502, got an error on unmarshall %s ", err.Error())
-			c.Writer.Write([]byte(fmt.Sprintf(" gate way error %s", err.Error())))
-			return
-		}
-		if isFirst {
-			log.Infof("Got resp status %d ", respMsg.StatusCode)
-			for k, v := range respMsg.Headers {
-				log.Infof("%s = %s ", k, v)
-				c.Header(k, v)
+		select {
+		case <-c.Request.Context().Done():
+			log.Info("context done, client might have disconnected, returning")
+			if req.Stream {
+				endLogStreaming(c, nc, requestUUID)
 			}
-			c.Status(respMsg.StatusCode)
-			isFirst = false
-		}
+			return
+		default:
+			msg, err := replyChannel.NextMsg(time.Minute * 2)
+			if err != nil {
+				if err == nats.ErrTimeout {
+					continue
+				}
+				c.Status(502)
+				c.Header("Content-Type", "text/plain")
+				log.WithError(err).Errorf("Returning a 502, got an error next message %s ", err.Error())
+				c.Writer.Write([]byte(fmt.Sprintf(" gate way error %s", err.Error())))
+				if req.Stream {
+					endLogStreaming(c, nc, requestUUID)
+				}
+				return
+			}
 
-		if respMsg.OutBody != nil {
-			c.Writer.Write(respMsg.OutBody)
-		}
-		if respMsg.LastMessage {
-			break
+			var respMsg model.CallResponse
+			err = json.Unmarshal(msg.Data, &respMsg)
+			if err != nil {
+				if req.Stream {
+					endLogStreaming(c, nc, requestUUID)
+				}
+				c.Status(502)
+				c.Header("Content-Type", "text/plain")
+				log.WithError(err).Errorf("Returning a 502, got an error on unmarshall %s ", err.Error())
+				c.Writer.Write([]byte(fmt.Sprintf(" gate way error %s", err.Error())))
+				return
+			}
+			if isFirst {
+				log.Infof("Got resp status %d ", respMsg.StatusCode)
+				for k, v := range respMsg.Headers {
+					log.Infof("%s = %s ", k, v)
+					c.Header(k, v)
+				}
+				c.Status(respMsg.StatusCode)
+				isFirst = false
+			}
+
+			if respMsg.OutBody != nil {
+				_, err = c.Writer.Write(respMsg.OutBody)
+				if err != nil {
+					if err.Error() == "client disconnected" && req.Stream {
+						log.Warn("Write err, client disconnected, ending streaming")
+						endLogStreaming(c, nc, requestUUID)
+						return
+					}
+				}
+				c.Writer.Flush()
+			}
+			if respMsg.LastMessage {
+				return
+			}
 		}
 	}
-	c.Writer.Flush()
-
 }
 
 func GetRouteIDFromAuthHeader(c *gin.Context) string {
@@ -178,4 +222,20 @@ func GetRouteIDFromAuthHeader(c *gin.Context) string {
 		userTokenWhichBecomesRouteID = "dev"
 	}
 	return userTokenWhichBecomesRouteID
+}
+
+func endLogStreaming(c *gin.Context, nc *nats.Conn, requestUUID string) {
+	log.Infof("ending log streaming")
+	userTokenWhichBecomesRouteID := GetRouteIDFromAuthHeader(c)
+	sbMsgSub := model.MakeMessageSubject(userTokenWhichBecomesRouteID, model.K8SRelayRequestMessageSubjectSuffix+"."+requestUUID+".stopStreaming")
+	log.Infof("endLogStreaming: subject for log streaming end: %s", sbMsgSub)
+	nm := nats.NewMsg(sbMsgSub)
+	err := nc.PublishMsg(nm)
+	if err != nil {
+		c.Status(502)
+		c.Header("Content-Type", "text/plain")
+		log.WithError(err).Errorf("Returning a 502, got an error failed to publish message %s ", err.Error())
+		c.Writer.Write([]byte(fmt.Sprintf(" gate way error %s", err.Error())))
+		return
+	}
 }

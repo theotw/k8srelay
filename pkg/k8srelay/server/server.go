@@ -68,7 +68,7 @@ func newRelayServer(locationID string, unitTestMode bool) *server {
 
 func (s *server) configureNatsSyncLocationID() {
 
-	if _, err := s.natsClient.Subscribe(utils.ResponseForLocationID, func(msg *nats.Msg) {
+	if _, err := s.natsClient.Subscribe(ResponseForLocationID, func(msg *nats.Msg) {
 		s.locationID = string(msg.Data)
 		log.WithField("locationID", s.locationID).Info("Using location ID")
 
@@ -76,7 +76,7 @@ func (s *server) configureNatsSyncLocationID() {
 		log.WithError(err).Fatalf("Unable to talk to NATS")
 	}
 
-	if err := s.natsClient.Publish(utils.RequestForLocationID, []byte("")); err != nil {
+	if err := s.natsClient.Publish(RequestForLocationID, []byte("")); err != nil {
 		log.WithError(err).Errorf("failed to send request for locationID")
 	}
 }

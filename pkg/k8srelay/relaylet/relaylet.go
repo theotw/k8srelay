@@ -14,9 +14,8 @@ import (
 	"fmt"
 	"github.com/nats-io/nats.go"
 	log "github.com/sirupsen/logrus"
-	models "github.com/theotw/k8srelay/pkg/k8srelay/model"
+	model "github.com/theotw/k8srelay/pkg/k8srelay/model"
 	"github.com/theotw/k8srelay/pkg/natsmodel"
-	"github.com/theotw/k8srelay/pkg/utils"
 	"gopkg.in/yaml.v3"
 	"io"
 	"net/http"
@@ -81,7 +80,7 @@ func (t *Relaylet) initFromKubeConfig() error {
 	if err != nil {
 		return err
 	}
-	var config models.KubeConfigCluster
+	var config model.KubeConfigCluster
 	err = yaml.Unmarshal(bits, &config)
 	if err != nil {
 		return err
@@ -156,7 +155,7 @@ func (t *Relaylet) init() error {
 		},
 	}
 
-	sub := utils.MakeMessageSubject("*", models.K8SRelayRequestMessageSubjectSuffix)
+	sub := model.MakeMessageSubject("*", model.K8SRelayRequestMessageSubjectSuffix)
 	nc := natsmodel.GetNatsConnection()
 	nc.Subscribe(sub, func(msg *nats.Msg) {
 		go t.DoCall(msg)
@@ -167,9 +166,9 @@ func (t *Relaylet) init() error {
 const debug = false
 
 func (t *Relaylet) DoCall(nm *nats.Msg) {
-	respMsg := models.NewCallResponse()
+	respMsg := model.NewCallResponse()
 	nc := natsmodel.GetNatsConnection()
-	var req models.CallRequest
+	var req model.CallRequest
 	err := json.Unmarshal(nm.Data, &req)
 	if err != nil {
 		respMsg.StatusCode = 502
@@ -202,8 +201,21 @@ func (t *Relaylet) DoCall(nm *nats.Msg) {
 		token := fmt.Sprintf("Bearer %s", t.clientToken)
 		relayreq.Header.Set("Authorization", token)
 	}
-	resp, err := t.client.Do(relayreq)
 
+	if !req.Stream {
+		t.callAPI(nc, nm, relayreq, respMsg, "", false)
+	} else {
+		go t.streamAPIMsgs(nc, nm, relayreq, respMsg, req.UUID)
+	}
+}
+
+func (t *Relaylet) streamAPIMsgs(nc *nats.Conn, nm *nats.Msg, relayreq *http.Request, respMsg *model.CallResponse, requestUUID string) {
+	log.Infof("starting streaming of API")
+	t.callAPI(nc, nm, relayreq, respMsg, requestUUID, true)
+}
+
+func (t *Relaylet) callAPI(nc *nats.Conn, nm *nats.Msg, relayreq *http.Request, respMsg *model.CallResponse, requestUUID string, stream bool) {
+	resp, err := t.client.Do(relayreq)
 	if err != nil {
 		respMsg.StatusCode = 502
 		respMsg.AddHeader("Content-Type", "text/plain")
@@ -224,7 +236,39 @@ func (t *Relaylet) DoCall(nm *nats.Msg) {
 			respMsg.AddHeader(k, v[0])
 		}
 
+		streamStopChannel := make(chan int)
+		if stream {
+			sbMsgSub := model.MakeMessageSubject("*", model.K8SRelayRequestMessageSubjectSuffix+"."+requestUUID+".stopStreaming")
+			sync, err := nc.SubscribeSync(sbMsgSub)
+			if err != nil {
+				log.WithError(err).Errorf("Unable to subscribe to %s response message %s", sbMsgSub, err.Error())
+				return
+			}
+			go func() {
+				for {
+					_, err = sync.NextMsg(time.Minute * 1)
+					if err != nil {
+						if err != nats.ErrTimeout {
+							log.Warnf("timeout reading NextMsg %s, ignoring", err.Error())
+						}
+					} else {
+						log.Info("got a request to stop streaming of API request")
+						streamStopChannel <- 0
+						return
+					}
+				}
+			}()
+		}
+
 		for {
+			if stream {
+				select {
+				case <-streamStopChannel:
+					log.Info("stopping streaming of API request")
+					return
+				default:
+				}
+			}
 			buf := make([]byte, 1024*1024)
 			n, err := resp.Body.Read(buf)
 			if err != nil {
@@ -248,11 +292,10 @@ func (t *Relaylet) DoCall(nm *nats.Msg) {
 			if merr != nil {
 				log.WithError(merr).Errorf("Error sending return message %s %s", nm.Reply, merr.Error())
 			}
-			log.Debugf("Recieveing data size %d last message flag %v", n, respMsg.LastMessage)
+			log.Debugf("Receiveing data size %d last message flag %v", n, respMsg.LastMessage)
 			if respMsg.LastMessage {
 				break
 			}
 		}
 	}
-
 }

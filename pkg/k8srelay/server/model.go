@@ -16,6 +16,10 @@ import (
 )
 
 // RequestForLocationID send this message to get the location ID
+const RequestForLocationID = "natssync.location.request"
+
+// ResponseForLocationID this is the response subject, the data is the location ID, this message can be sent without a request, if the location ID changes
+const ResponseForLocationID = "natssync.location.response"
 
 type HttpReqHeader struct {
 	Key    string
