@@ -54,6 +54,7 @@ basebuild: export LDFLAGS=-ldflags "-X github.com/theotw/k8srelay/pkg.VERSION=${
 basebuild:
 	mkdir -p out
 	rm -f  out/bridgeserver_x64_linux
+	./gen_certs_${GOOS}.sh
 	go mod tidy
 	go build ${LDFLAGS} -v -o out/k8srelaylet_${GOARCH}_${GOOS} apps/k8s-relaylet.go
 	go build ${LDFLAGS} -v -o out/k8srelayserver_${GOARCH}_${GOOS} apps/k8s-relay-server.go
@@ -74,7 +75,7 @@ clean:
 	rm go.sum
 
 serverimage:
-	DOCKER_BUILDKIT=1 docker build --no-cache --build-arg IMAGE_REPO=${IMAGE_REPO} --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/k8srelayserver:${IMAGE_TAG} --target k8srelayserver .
+	DOCKER_BUILDKIT=1 docker build --no-cache  --build-arg CA_KEY=${CA_KEY} --build-arg CA_CERT=${CA_CERT} --build-arg CA_SUB=${CA_SUB} --build-arg IMAGE_REPO=${IMAGE_REPO} --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/k8srelayserver:${IMAGE_TAG} --target k8srelayserver .
 relayletimage:
 	DOCKER_BUILDKIT=1 docker build --no-cache --build-arg IMAGE_REPO=${IMAGE_REPO} --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/k8srelaylet:${IMAGE_TAG} --target k8srelaylet .
 

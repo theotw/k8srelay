@@ -7,7 +7,9 @@ COPY ./ ./
 ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin/:/build/mods/bin
 ENV GOSUMDB=off
 ARG IMAGE_TAG=latest
-ARG  CA_KEY
+ARG CA_KEY
+ARG CA_CERT
+ARG CA_SUB
 ARG GOPATH=/build/mods
 
 RUN make buildlinux
@@ -27,19 +29,24 @@ ARG IMAGE_TAG=latest
 ENV GOSUMDB=off
 COPY --from=base /build/out/*.test ./
 
-# Bridge server
+# relay server
 FROM alpine-base as k8srelayserver
-WORKDIR /build
+RUN mkdir out
 COPY --from=base /build/out/k8srelayserver_amd64_linux ./k8srelayserver
+COPY --from=base /build/out/k8srelay.crt ./out/k8srelay.crt
+COPY --from=base /build/out/k8srelay.key ./out/k8srelay.key
+COPY --from=base /build/myCA.pem ./out/myCA.pem
+
 ENV GIN_MODE=release
 
 ENTRYPOINT ["./k8srelayserver"]
 
-# Bridge client
+# relaylet
 FROM alpine-base as k8srelaylet
 ARG IMAGE_TAG=latest
 ENV GOSUMDB=off
-WORKDIR /build
 COPY --from=base /build/out/k8srelaylet_amd64_linux ./k8srelaylet
+
+
 ENV GIN_MODE=release
 ENTRYPOINT ["./k8srelaylet"]
