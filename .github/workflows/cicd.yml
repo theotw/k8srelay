@@ -60,6 +60,7 @@ jobs:
       - name: Build image
         run: |
           export BUILD_VERSION=$(cat out/BUILD_VERSION.txt)
+          export IMAGE_TAG=$BUILD_VERSION
           echo $BUILD_VERSION
           make allimages
 
@@ -68,7 +69,9 @@ jobs:
         run: |
           echo "Push commented out"
           export BUILD_VERSION=$(cat out/BUILD_VERSION.txt)
+          export IMAGE_TAG=$BUILD_VERSION
           echo $BUILD_VERSION 
+          
           docker login $IMAGE_REPO -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
           make push
 
