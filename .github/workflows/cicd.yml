@@ -33,6 +33,21 @@ jobs:
           go install github.com/wadey/gocovmerge@latest
           mkdir -p out
 
+      - name: Unit / L1 Test
+        run: |
+          #top level out needed for mounting
+          mkdir -p out
+          go install github.com/jstemmer/go-junit-report@latest
+          #lower level out.  we want both
+          mkdir -p out
+          export NATS_URL=nats://localhost:30220
+          go test -v -coverpkg=github.com/theotw/k8srelay/pkg/... -coverprofile=out/unit_coverage.out github.com/theotw/k8srelay/pkg/... > out/l1_out.txt 2>&1
+          cat out/l1_out.txt | go-junit-report > out/l1_report.xml 
+          cat out/l1_out.txt
+          ls -l out/
+          cat out/l1_report.xml
+          pwd        
+      
       - name: Create kind cluster
         uses: helm/kind-action@v1.4.0
         with:
@@ -47,6 +62,12 @@ jobs:
           kubectl get storageclasses
           echo "kubectl  get serviceaccount"
           kubectl  get serviceaccount
+          kubectl create ns test
+          kubectl -n test apply -f testfiles/sa.yaml
+          kubectl -n test apply -f testfiles/relay-config.yaml
+          kubectl -n test apply -f testfiles/nats.yaml
+          
+          
 
 
       - name: Get current date

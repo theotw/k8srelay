@@ -1,0 +1,83 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: k8srelay-sa
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: k8srelay-cr
+rules:
+  - apiGroups: [ "*" ]
+    resources: [ "*" ]
+    verbs: [ "get", "list", "watch", "create", "update", "patch", "delete" ]
+  - apiGroups:
+      - ""
+      - apiextensions.k8s.io
+      - apps
+      - autoscaling
+      - batch
+      - crd.projectcalico.org
+      - extensions
+      - networking.k8s.io
+      - policy
+      - rbac.authorization.k8s.io
+      - security.openshift.io
+      - snapshot.storage.k8s.io
+      - storage.k8s.io
+    resources:
+      - configmaps
+      - cronjobs
+      - customresourcedefinitions
+      - daemonsets
+      - deployments
+      - horizontalpodautoscalers
+      - ingresses
+      - jobs
+      - namespaces
+      - networkpolicies
+      - persistentvolumeclaims
+      - poddisruptionbudgets
+      - pods
+      - podtemplates
+      - podsecuritypolicies
+      - replicasets
+      - replicationcontrollers
+      - replicationcontrollers/scale
+      - rolebindings
+      - roles
+      - secrets
+      - serviceaccounts
+      - services
+      - statefulsets
+      - storageclasses
+      - csidrivers
+      - csinodes
+      - securitycontextconstraints
+      - volumesnapshots
+      - volumesnapshotcontents
+    verbs:
+      - get
+      - list
+      - watch
+      - delete
+      - use
+      - create
+      - update
+      - patch
+---
+# bind serviceaccount to clusterrole
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: k8srelay-rb
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: k8srelay-cr
+subjects:
+  - kind: ServiceAccount
+    name: k8srelay-sa
+    namespace: test
+

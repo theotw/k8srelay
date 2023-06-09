@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: relay-config
+data:
+  # property-like keys; each key maps to a simple value
+  nats_url: "nats://nats:4222"
+  log_level: "trace"
+  skip_tls_validation: "false"
