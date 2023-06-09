@@ -97,7 +97,7 @@ jobs:
           echo $DOCKER_PASSWORD
           docker login $IMAGE_REPO -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
           make tag
-          make push
+          
 
 
       - name: Upload test artifacts
