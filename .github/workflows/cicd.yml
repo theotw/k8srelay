@@ -73,6 +73,7 @@ jobs:
           echo $BUILD_VERSION 
           
           docker login $IMAGE_REPO -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
+          make tag
           make push
 
 
