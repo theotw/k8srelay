@@ -15,8 +15,6 @@ jobs:
     env:
       DOCKER_USERNAME: ${{ secrets.DOCKER_USER }}
       DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
-      GH_CONTAINER_USER: ${{ secrets.GH_CONTAINER_USER }}
-      GH_CONTAINER_PASSWORD: ${{ secrets.GH_CONTAINER_PASSWORD }}
     steps:
       - name: Set up Go 1.x
         uses: actions/setup-go@v3
@@ -47,6 +45,31 @@ jobs:
           kubectl get storageclasses
           echo "kubectl  get serviceaccount"
           kubectl  get serviceaccount
+
+
+      - name: Get current date
+        id: date
+        run: |
+          export BASEVERSION=$(cat version.txt)
+          export BUILD_VERSION=$BASEVERSION.$(date +'%Y%m%d%H%M')
+          echo $BUILD_VERSION > out/BUILD_VERSION.txt
+          cd ..
+
+      - name: Build image
+        run: |
+          export BUILD_VERSION=$(cat out/BUILD_VERSION.txt)
+          echo $BUILD_VERSION
+          make allimages
+
+      - name: Tag and push image
+        if: github.ref == 'refs/heads/main'
+        run: |
+          echo "Push commented out"
+          export BUILD_VERSION=$(cat out/BUILD_VERSION.txt)
+          echo $BUILD_VERSION 
+          docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
+          docker login $IMAGE_REPO -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
+          make push
 
 
       - name: Upload test artifacts
