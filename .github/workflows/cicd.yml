@@ -69,7 +69,6 @@ jobs:
           echo "Push commented out"
           export BUILD_VERSION=$(cat out/BUILD_VERSION.txt)
           echo $BUILD_VERSION 
-          docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
           docker login $IMAGE_REPO -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
           make push
 
