@@ -93,11 +93,9 @@ jobs:
           export IMAGE_TAG=$BUILD_VERSION
           echo $BUILD_VERSION 
           echo $IMAGE_REPO 
-          echo $DOCKER_USERNAME
-          echo $DOCKER_PASSWORD
           docker login $IMAGE_REPO -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
           make tag
-          
+          make push
 
 
       - name: Upload test artifacts
