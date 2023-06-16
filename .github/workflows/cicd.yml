@@ -56,7 +56,7 @@ jobs:
           docker login $IMAGE_REPO -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
           cat /home/runner/.docker/config.json
       
-          docker push theotw/k8srelaytest:dev
+          # 
 
       - name: Create kind cluster
         uses: helm/kind-action@v1.4.0
