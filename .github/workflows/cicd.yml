@@ -51,7 +51,7 @@ jobs:
       - name: Build Test image
         run: |
           export IMAGE_TAG=dev
-          make testimage
+          make relaytest
 
       - name: Create kind cluster
         uses: helm/kind-action@v1.4.0
