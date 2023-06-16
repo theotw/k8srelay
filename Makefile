@@ -79,9 +79,9 @@ serverimage:
 relayletimage:
 	DOCKER_BUILDKIT=1 docker build --no-cache --build-arg IMAGE_REPO=${IMAGE_REPO} --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/k8srelaylet:${IMAGE_TAG} --target k8srelaylet .
 relaytest:
-	DOCKER_BUILDKIT=1 docker build --no-cache --build-arg IMAGE_REPO=theotw --build-arg IMAGE_TAG=dev --tag ${IMAGE_REPO}/k8srelaytest:${IMAGE_TAG} --target base .
+	DOCKER_BUILDKIT=1 docker build --no-cache --build-arg IMAGE_REPO=${IMAGE_REPO} --build-arg IMAGE_TAG=${IMAGE_TAG} --tag ${IMAGE_REPO}/k8srelaytest:${IMAGE_TAG} --target base .
 
-allimages: serverimage relayletimage relaytest
+allimages: serverimage relayletimage
 buildAndTag: allimages tag
 tag:
 	docker tag ${IMAGE_REPO}/k8srelayserver:${IMAGE_TAG} ${IMAGE_REPO}/k8srelayserver:latest

@@ -10,6 +10,7 @@ spec:
     - protocol: TCP
       port: 8082
       targetPort: 8080
+      name: http
 ---
 
 apiVersion: v1

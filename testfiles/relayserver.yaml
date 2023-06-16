@@ -10,12 +10,15 @@ spec:
     - protocol: TCP
       port: 8443
       targetPort: 8443
+      name: https
     - protocol: TCP
       port: 1701
       targetPort: 1701
+      name: metricsport
     - protocol: TCP
       port: 8080
       targetPort: 8080
+      name: http
 ---
 
 apiVersion: v1

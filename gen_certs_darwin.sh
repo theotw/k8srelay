@@ -16,8 +16,11 @@ else
   echo "$CA_CERT" | base64 -d > myCA.pem
   echo "$CA_KEY" | base64 -d > myCA.key
 fi
+echo "Generating Private Key"
 openssl genrsa -out out/k8srelay.key 2048
+echo "Generating Private CSR"
 openssl req -new -key out/k8srelay.key -out out/k8srelay.csr  -subj $CA_SUB
+echo "Generating Private Signing"
 openssl x509 -req -in out/k8srelay.csr -CA myCA.pem -CAkey myCA.key -CAcreateserial -out out/k8srelay.crt -days 825 -sha256 -extfile x509.config
 cp myCA.pem out/myCA.pem
 #rm  myCA.key
