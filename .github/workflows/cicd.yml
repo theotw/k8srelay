@@ -76,6 +76,8 @@ jobs:
           kubectl -n test apply -f testfiles/nats.yaml
           kubectl -n test apply -f testfiles/relayserver.yaml
           kubectl -n test apply -f testfiles/relaylet.yaml
+          sleep 60
+          kubectl -n test get all
           kubectl -n test port-forward service/nats 4222:4222 &
           kubectl -n test port-forward service/relayserver 8443:8443 &
           kubectl -n test port-forward service/relayserver 8080:8080 &
