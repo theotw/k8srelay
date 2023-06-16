@@ -52,6 +52,7 @@ jobs:
         run: |
           export IMAGE_TAG=dev
           make relaytest
+          docker push theotw/k8srelaytest:dev
 
       - name: Create kind cluster
         uses: helm/kind-action@v1.4.0
