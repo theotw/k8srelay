@@ -17,7 +17,6 @@ jobs:
       DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
       CA_SUB: ${{ vars.CA_SUB }}
       IMAGE_REPO: ${{ vars.IMAGE_REPO }}
-      XXX: ${{ vars.DOCKER_USER }}
     steps:
       - name: Set up Go 1.x
         uses: actions/setup-go@v3
@@ -54,8 +53,9 @@ jobs:
           export IMAGE_TAG=dev
           make relaytest
           echo "Logging into $IMAGE_REPO with $DOCKER_USERNAME"
-          echo "Logging into $IMAGE_REPO with $XXX"
           docker login $IMAGE_REPO -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
+          cat /home/runner/.docker/config.json
+      
           docker push theotw/k8srelaytest:dev
 
       - name: Create kind cluster
