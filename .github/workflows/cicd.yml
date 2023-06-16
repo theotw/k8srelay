@@ -82,13 +82,16 @@ jobs:
           kubectl -n test apply -f testfiles/relaylet.yaml
           sleep 60
           kubectl -n test get all
+          echo "kubectl -n test logs relaylet"
+          kubectl -n test logs relaylet
+          echo "kubectl -n test logs relayserver"
+          kubectl -n test logs relayserver
+
           kubectl -n test port-forward service/nats 4222:4222 &
           kubectl -n test port-forward service/relayserver 8443:8443 &
           kubectl -n test port-forward service/relayserver 8080:8080 &
           kubectl -n test port-forward service/relayserver 8080:8080 &
           kubectl -n test port-forward service/relaylet 8082:8082 &
-          kubectl -n test logs relaylet
-          kubectl -n test logs relayserver
 
       - name: Wait for relay server
         uses: iFaxity/wait-on-action@v1
