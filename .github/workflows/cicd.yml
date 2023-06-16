@@ -52,6 +52,7 @@ jobs:
         run: |
           export IMAGE_TAG=dev
           make relaytest
+          docker login $IMAGE_REPO -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
           docker push theotw/k8srelaytest:dev
 
       - name: Create kind cluster
