@@ -28,6 +28,7 @@ WORKDIR /build
 ARG IMAGE_TAG=latest
 ENV GOSUMDB=off
 COPY --from=base /build/* ./
+RUN chmod +x scripts/*
 
 
 # relay server

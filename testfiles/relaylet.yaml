@@ -27,7 +27,7 @@ spec:
     - name: relaylet
       image: theotw/k8srelaytest:dev
       command:
-        - ./run_relaylet_coverage.sh
+        - ./scripts/run_relaylet_coverage.sh
       env:
         - name: NATS_SERVER_URL
           valueFrom:

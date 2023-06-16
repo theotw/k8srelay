@@ -17,7 +17,7 @@ import (
 
 func TestRelayletMain(t *testing.T) {
 	os.Setenv("LOG_LEVEL", "trace")
-
+	log.Info("Starting Relaylet")
 	http.HandleFunc("/kill", KillIt)
 	http.HandleFunc("/ready", Ready)
 	go http.ListenAndServe(":8080", nil)

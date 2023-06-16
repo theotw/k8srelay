@@ -35,7 +35,7 @@ spec:
     - name: relayserver
       image: theotw/k8srelaytest:dev
       command:
-        - ./run_relay_server_coverage.sh
+        - ./scripts/run_relay_server_coverage.sh
       imagePullPolicy: Always
       env:
         - name: NATS_SERVER_URL
