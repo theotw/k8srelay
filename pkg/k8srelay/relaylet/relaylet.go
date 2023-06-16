@@ -157,7 +157,7 @@ func (t *Relaylet) init() error {
 
 	sub := model.MakeMessageSubject("*", model.K8SRelayRequestMessageSubjectSuffix)
 	nc := natsmodel.GetNatsConnection()
-	nc.Subscribe(sub, func(msg *nats.Msg) {
+	nc.QueueSubscribe(sub, "k8srelay", func(msg *nats.Msg) {
 		go t.DoCall(msg)
 	})
 	return nil

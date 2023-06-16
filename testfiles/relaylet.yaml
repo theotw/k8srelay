@@ -3,7 +3,7 @@ kind: Service
 metadata:
   name: relaylet
 spec:
-  type: NodePort
+  type: ClusterIP
   selector:
     type: relaylet
   ports:
@@ -24,8 +24,9 @@ spec:
   restartPolicy: Never
   containers:
     - name: relaylet
-      image: theotw/k8srelaylet:latest
-      imagePullPolicy: Always
+      image: theotw/k8srelaytest:dev
+      command:
+        - ./run_relaylet_coverage.sh
       env:
         - name: NATS_SERVER_URL
           valueFrom:

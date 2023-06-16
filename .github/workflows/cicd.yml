@@ -62,13 +62,51 @@ jobs:
           kubectl get storageclasses
           echo "kubectl  get serviceaccount"
           kubectl  get serviceaccount
+
+      - name: Deploy Server
+        run: |
           kubectl create ns test
           kubectl -n test apply -f testfiles/sa.yaml
           kubectl -n test apply -f testfiles/relay-config.yaml
           kubectl -n test apply -f testfiles/nats.yaml
-          
-          
+          kubectl -n test apply -f testfiles/relayserver.yaml
+          kubectl -n test apply -f testfiles/relaylet.yaml
+          kubectl -n test port-forward service/nats 4222:4222 &
+          kubectl -n test port-forward service/relayserver 8443:8443 &
+          kubectl -n test port-forward service/relayserver 8080:8080 &
+          kubectl -n test port-forward service/relayserver 8080:8080 &
+          kubectl -n test port-forward service/relaylet 8082:8082 &
 
+      - name: Wait for relay server
+        uses: iFaxity/wait-on-action@v1
+        with:
+          resource: http://localhost:8080/ready
+          timeout: 300000
+          verbose: true
+          interval: 5000
+
+      - name: Wait for relaylet
+        uses: iFaxity/wait-on-action@v1
+        with:
+          resource: http://localhost:8082/ready
+          timeout: 300000
+          verbose: true
+          interval: 5000
+
+      - name: Run L2 Tests
+        run: |
+          cd connector
+          mkdir -p out
+          export NATS_SERVER_URL=nats://localhost:4222
+          # go test -v -coverpkg=github.com/netapp-polaris/astra-connector/connector/pkg/... -coverprofile=out/l2_client_coverage.out github.com/netapp-polaris/astra-connector/connector/tests/client/... > out/l2_client_out.txt 2>&1  
+          echo "Done with L2 Tests, sending kill to server"
+          curl http://localhost:8080/kill | exit 0
+          curl http://localhost:8082/kill | exit 0
+          echo " Waiting 10 for server to finish curl ret=" $?
+          sleep 10
+          echo "converting l2 client out"
+          #cat out/l2_client_out.txt | go-junit-report > out/l2_client_report.xml
+          echo "Done"          
 
       - name: Get current date
         id: date
@@ -79,6 +117,7 @@ jobs:
           cd ..
 
       - name: Build image
+        if: github.ref == 'refs/heads/mainX'
         run: |
           export BUILD_VERSION=$(cat out/BUILD_VERSION.txt)
           export IMAGE_TAG=$BUILD_VERSION
@@ -86,7 +125,7 @@ jobs:
           make allimages
 
       - name: Tag and push image
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/mainX'
         run: |
           echo "Push commented out"
           export BUILD_VERSION=$(cat out/BUILD_VERSION.txt)

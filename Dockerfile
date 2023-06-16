@@ -27,7 +27,8 @@ FROM alpine-base as k8srelay-test
 WORKDIR /build
 ARG IMAGE_TAG=latest
 ENV GOSUMDB=off
-COPY --from=base /build/out/*.test ./
+COPY --from=base /build/* ./
+
 
 # relay server
 FROM alpine-base as k8srelayserver
