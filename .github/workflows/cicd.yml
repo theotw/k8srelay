@@ -54,11 +54,6 @@ jobs:
           make relaytest
           echo "Logging into $IMAGE_REPO with $DOCKER_USERNAME"
           docker login $IMAGE_REPO -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
-          cat /home/runner/.docker/config.json
-          echo $DOCKER_PASSWORD >somefile.txt
-          cat somefile.txt
-          echo $DOCKER_USERNAME >somefile.txt
-          cat somefile.txt
           # docker push theotw/k8srelay:dev      
       
 
@@ -92,6 +87,8 @@ jobs:
           kubectl -n test port-forward service/relayserver 8080:8080 &
           kubectl -n test port-forward service/relayserver 8080:8080 &
           kubectl -n test port-forward service/relaylet 8082:8082 &
+          kubectl -n test logs relaylet
+          kubectl -n test logs relayserver
 
       - name: Wait for relay server
         uses: iFaxity/wait-on-action@v1
