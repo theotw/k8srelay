@@ -54,7 +54,7 @@ jobs:
           make relaytest
           echo "Logging into $IMAGE_REPO with $DOCKER_USERNAME"
           docker login $IMAGE_REPO -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
-          # docker push theotw/k8srelay:dev      
+          docker push $$IMAGE_REPO/k8srelaytest:dev      
       
 
       - name: Create kind cluster
@@ -93,7 +93,7 @@ jobs:
           kubectl -n test port-forward service/relayserver 8443:8443 &
           kubectl -n test port-forward service/relayserver 8080:8080 &
           kubectl -n test port-forward service/relaylet 8082:8082 &
-          
+
       - name: Wait for relaylet
         uses: iFaxity/wait-on-action@v1
         with:
