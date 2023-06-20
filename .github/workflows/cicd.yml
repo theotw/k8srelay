@@ -80,7 +80,7 @@ jobs:
           kubectl -n test apply -f testfiles/nats.yaml
           kubectl -n test apply -f testfiles/relayserver.yaml
           kubectl -n test apply -f testfiles/relaylet.yaml
-          sleep 60
+          sleep 120
           kubectl -n test describe pod relayserver
           kubectl -n test describe pod relaylet
           kubectl -n test get all
