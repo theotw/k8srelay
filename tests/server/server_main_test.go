@@ -5,6 +5,7 @@
 package server
 
 import (
+	"fmt"
 	log "github.com/sirupsen/logrus"
 	"github.com/theotw/k8srelay/pkg/k8srelay/server"
 	"net/http"
@@ -13,7 +14,8 @@ import (
 )
 
 func TestServerMain(t *testing.T) {
-	os.Setenv("LOG_LEVEL", "trace")
+	fmt.Println("TestServerMain")
+	os.Setenv("LOG_LEVEL", "debug")
 	log.Info("Starting Relay Server")
 	http.HandleFunc("/kill", KillIt)
 	http.HandleFunc("/ready", Ready)
@@ -23,5 +25,6 @@ func TestServerMain(t *testing.T) {
 		log.Errorf("Unable to create server %s", err.Error())
 		os.Exit(1)
 	}
+	fmt.Println("Running TestServerMain")
 	srv.RunRelayServer(true)
 }

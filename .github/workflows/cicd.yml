@@ -93,6 +93,14 @@ jobs:
           kubectl -n test port-forward service/relayserver 8443:8443 &
           kubectl -n test port-forward service/relayserver 8080:8080 &
           kubectl -n test port-forward service/relaylet 8082:8082 &
+          
+      - name: Wait for relaylet
+        uses: iFaxity/wait-on-action@v1
+        with:
+          resource: http://localhost:8082/ready
+          timeout: 300000
+          verbose: true
+          interval: 5000
 
       - name: Wait for relay server
         uses: iFaxity/wait-on-action@v1
@@ -102,13 +110,6 @@ jobs:
           verbose: true
           interval: 5000
 
-      - name: Wait for relaylet
-        uses: iFaxity/wait-on-action@v1
-        with:
-          resource: http://localhost:8082/ready
-          timeout: 300000
-          verbose: true
-          interval: 5000
 
       - name: Run L2 Tests
         run: |

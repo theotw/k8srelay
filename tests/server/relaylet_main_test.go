@@ -5,6 +5,7 @@
 package server
 
 import (
+	"fmt"
 	log "github.com/sirupsen/logrus"
 	"github.com/theotw/k8srelay/pkg/k8srelay/relaylet"
 	"github.com/theotw/k8srelay/pkg/natsmodel"
@@ -16,7 +17,8 @@ import (
 )
 
 func TestRelayletMain(t *testing.T) {
-	os.Setenv("LOG_LEVEL", "trace")
+	fmt.Println("TestServer Relay")
+	os.Setenv("LOG_LEVEL", "debug")
 	log.Info("Starting Relaylet")
 	http.HandleFunc("/kill", KillIt)
 	http.HandleFunc("/ready", Ready)
@@ -26,6 +28,7 @@ func TestRelayletMain(t *testing.T) {
 		log.Errorf("Unable to create server %s", err.Error())
 		os.Exit(1)
 	}
+	fmt.Println("Relay running")
 
 	con := natsmodel.GetNatsConnection()
 	quit := make(chan os.Signal)
