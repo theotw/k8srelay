@@ -54,7 +54,7 @@ jobs:
           make relaytest
           echo "Logging into $IMAGE_REPO with $DOCKER_USERNAME"
           docker login $IMAGE_REPO -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
-          docker push $$IMAGE_REPO/k8srelaytest:dev      
+          docker push $IMAGE_REPO/k8srelaytest:dev      
       
 
       - name: Create kind cluster
