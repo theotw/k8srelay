@@ -92,7 +92,6 @@ jobs:
           kubectl -n test port-forward service/nats 4222:4222 &
           kubectl -n test port-forward service/relayserver 8443:8443 &
           kubectl -n test port-forward service/relayserver 8080:8080 &
-          kubectl -n test port-forward service/relayserver 8080:8080 &
           kubectl -n test port-forward service/relaylet 8082:8082 &
 
       - name: Wait for relay server
