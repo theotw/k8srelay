@@ -116,10 +116,8 @@ jobs:
 
       - name: Run L2 Tests
         run: |
-          cd connector
           mkdir -p out
           export NATS_SERVER_URL=nats://localhost:4222
-          # go test -v -coverpkg=github.com/netapp-polaris/astra-connector/connector/pkg/... -coverprofile=out/l2_client_coverage.out github.com/netapp-polaris/astra-connector/connector/tests/client/... > out/l2_client_out.txt 2>&1  
           echo "Done with L2 Tests, sending kill to server"
           curl http://localhost:8080/kill | exit 0
           curl http://localhost:8082/kill | exit 0
@@ -129,11 +127,20 @@ jobs:
           #cat out/l2_client_out.txt | go-junit-report > out/l2_client_report.xml
           echo "Done"          
 
-      - name: Get current date
+      - name: Get current date for Main
         id: date
+        if: github.ref == 'refs/heads/main'
         run: |
           export BASEVERSION=$(cat version.txt)
           export BUILD_VERSION=$BASEVERSION.$(date +'%Y%m%d%H%M')
+          echo $BUILD_VERSION > out/BUILD_VERSION.txt
+          cd ..
+      - name: Get current date for Main
+        id: date-beta
+        if: github.ref != 'refs/heads/main'
+        run: |
+          export BASEVERSION=$(cat version.txt)
+          export BUILD_VERSION=$BASEVERSION-beta.$(date +'%Y%m%d%H%M')
           echo $BUILD_VERSION > out/BUILD_VERSION.txt
           cd ..
 
@@ -147,6 +154,9 @@ jobs:
 
       - name: Tag and push image
         if: github.ref == 'refs/heads/mainX'
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USER }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
         run: |
           echo "Push commented out"
           export BUILD_VERSION=$(cat out/BUILD_VERSION.txt)
