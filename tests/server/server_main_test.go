@@ -15,6 +15,13 @@ import (
 
 func TestServerMain(t *testing.T) {
 	fmt.Println("TestServerMain")
+	working := os.Getenv("WORKING_DIR")
+	if len(working) > 0 {
+		os.Chdir(working)
+	}
+	t.Log(os.Getwd())
+
+	t.Log("Test")
 	os.Setenv("LOG_LEVEL", "debug")
 	log.Info("Starting Relay Server")
 	http.HandleFunc("/kill", KillIt)
@@ -27,4 +34,7 @@ func TestServerMain(t *testing.T) {
 	}
 	fmt.Println("Running TestServerMain")
 	srv.RunRelayServer(true)
+	t.Log("Test 2")
+
+	//	runtime.Goexit()
 }
