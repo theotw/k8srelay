@@ -95,6 +95,7 @@ jobs:
           kubectl -n test port-forward service/nats 4222:4222 &
           kubectl -n test port-forward service/relayserver 8443:8443 &
           kubectl -n test port-forward service/relayserver 8080:8080 &
+          kubectl -n test port-forward service/relayserver 1701:1701 &
           kubectl -n test port-forward service/relaylet 8082:8082 &
 
       - name: Wait for relaylet
@@ -127,7 +128,7 @@ jobs:
           #cat out/l2_client_out.txt | go-junit-report > out/l2_client_report.xml
           echo "Done"          
 
-      - name: Get current date for Main
+      - name: Make Version for Main
         id: date
         if: github.ref == 'refs/heads/main'
         run: |
@@ -135,7 +136,7 @@ jobs:
           export BUILD_VERSION=$BASEVERSION.$(date +'%Y%m%d%H%M')
           echo $BUILD_VERSION > out/BUILD_VERSION.txt
           cd ..
-      - name: Get current date for Main
+      - name: Make Version for Branch
         id: date-beta
         if: github.ref != 'refs/heads/main'
         run: |
@@ -145,7 +146,6 @@ jobs:
           cd ..
 
       - name: Build image
-        if: github.ref == 'refs/heads/mainX'
         run: |
           export BUILD_VERSION=$(cat out/BUILD_VERSION.txt)
           export IMAGE_TAG=$BUILD_VERSION
@@ -153,7 +153,6 @@ jobs:
           make allimages
 
       - name: Tag and push image
-        if: github.ref == 'refs/heads/mainX'
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USER }}
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}

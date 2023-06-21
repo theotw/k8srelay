@@ -23,6 +23,7 @@ metadata:
     role: relaylet
 spec:
   restartPolicy: Never
+  serviceAccountName: k8srelay-sa
   containers:
     - name: relaylet
       image: theotw/k8srelaytest:dev
